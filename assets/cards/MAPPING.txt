@@ -1,0 +1,58 @@
+original -> new
+Card_Green/Group 23.png -> green/1.png
+Card_Green/Group 24.png -> green/2.png
+Card_Green/Group 25.png -> green/3.png
+Card_Green/Group 26.png -> green/4.png
+Card_Green/Group 27.png -> green/5.png
+Card_Green/Group 28.png -> green/6.png
+Card_Green/Group 29.png -> green/7.png
+Card_Green/Group 30.png -> green/8.png
+Card_Green/Group 31.png -> green/9.png
+Card_Green/Group 32.png -> green/0.png
+Card_Green/Group 107.png -> green/shield.png
+Card_Green/Group 114.png -> green/shell.png
+Card_Green/Group 126.png -> green/swap.png
+Card_Brown/Group 33.png -> brown/1.png
+Card_Brown/Group 34.png -> brown/2.png
+Card_Brown/Group 35.png -> brown/3.png
+Card_Brown/Group 36.png -> brown/4.png
+Card_Brown/Group 37.png -> brown/5.png
+Card_Brown/Group 38.png -> brown/6.png
+Card_Brown/Group 39.png -> brown/7.png
+Card_Brown/Group 40.png -> brown/8.png
+Card_Brown/Group 41.png -> brown/9.png
+Card_Brown/Group 42.png -> brown/0.png
+Card_Brown/Group 106.png -> brown/shield.png
+Card_Brown/Group 115.png -> brown/shell.png
+Card_Brown/Group 125.png -> brown/swap.png
+Card_Ungu/Group 43.png -> purple/1.png
+Card_Ungu/Group 44.png -> purple/2.png
+Card_Ungu/Group 45.png -> purple/3.png
+Card_Ungu/Group 46.png -> purple/4.png
+Card_Ungu/Group 47.png -> purple/5.png
+Card_Ungu/Group 48.png -> purple/6.png
+Card_Ungu/Group 49.png -> purple/7.png
+Card_Ungu/Group 50.png -> purple/8.png
+Card_Ungu/Group 51.png -> purple/9.png
+Card_Ungu/Group 52.png -> purple/0.png
+Card_Ungu/Group 105.png -> purple/shield.png
+Card_Ungu/Group 116.png -> purple/shell.png
+Card_Ungu/Group 124.png -> purple/swap.png
+card_Magenta/Group 4.png -> magenta/1.png
+card_Magenta/Group 13.png -> magenta/2.png
+card_Magenta/Group 14.png -> magenta/3.png
+card_Magenta/Group 15.png -> magenta/4.png
+card_Magenta/Group 16.png -> magenta/5.png
+card_Magenta/Group 17.png -> magenta/6.png
+card_Magenta/Group 18.png -> magenta/7.png
+card_Magenta/Group 19.png -> magenta/8.png
+card_Magenta/Group 20.png -> magenta/9.png
+card_Magenta/Group 21.png -> magenta/0.png
+card_Magenta/Group 108.png -> magenta/shield.png
+card_Magenta/Group 113.png -> magenta/shell.png
+card_Magenta/Group 127.png -> magenta/swap.png
+Wild+Back Card/Group 97.png -> wild/wild.png
+Wild+Back Card/Group 80.png -> wild/wild-draw4.png
+Wild+Back Card/Group 101.png -> wild/back.png
+
+Dibuang (duplikat identik): Wild+Back Card/Group 99.png (=wild), Group 98.png (=wild-draw4)
