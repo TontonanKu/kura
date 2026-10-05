@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Kura Card - Permainan Kartu Kura</title>
+  <link rel="stylesheet" href="src/style.css">
+  <link rel="icon" type="image/png" href="assets/avatars/you.png">
+</head>
+<body>
+  <div id="app">
+    <!-- 1. MAIN MENU SCREEN -->
+    <div id="screen-menu" class="screen active">
+      <div class="menu-container">
+        <div class="menu-left">
+          <div class="game-logo">
+            <div class="logo-badge">🐢 Official Card Game</div>
+            <h1 class="logo-title">KURA</h1>
+            <p class="logo-tagline">Same cards, new moments!</p>
+          </div>
+          <div class="menu-buttons">
+            <button id="btn-play-menu" class="btn-menu-primary">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
+              Play
+            </button>
+            <button id="btn-room-menu" class="btn-menu-secondary">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+              Room / Lobby
+            </button>
+            <button id="btn-rules-menu" class="btn-menu-secondary">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+              Aturan & Kartu Spesial
+            </button>
+            <button id="btn-settings-menu" class="btn-menu-secondary">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+              </svg>
+              Settings
+            </button>
+          </div>
+        </div>
+        <div class="menu-right">
+          <div class="cards-showcase">
+            <img class="showcase-card card-1" src="assets/cards/green/1.png" alt="Card Green 1">
+            <img class="showcase-card card-2" src="assets/cards/brown/2.png" alt="Card Brown 2">
+            <img class="showcase-card card-3" src="assets/cards/purple/3.png" alt="Card Purple 3">
+          </div>
+          <div class="showcase-quote">
+            ✨ Serunya bermain kartu bersama teman!
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. MODE SELECT SCREEN -->
+    <div id="screen-mode" class="screen">
+      <div class="mode-container">
+        <div class="screen-header">
+          <button id="btn-back-mode" class="btn-back" title="Kembali">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+          </button>
+          <h2 class="screen-title">Pilih Mode Permainan</h2>
+          <div style="width: 44px;"></div>
+        </div>
+        <div class="mode-cards">
+          <div id="mode-multiplayer" class="mode-card multiplayer">
+            <div class="mode-icon">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+            </div>
+            <h3>Multiplayer</h3>
+            <p>Buat atau gabung Room dengan nama, kata sandi, dan jumlah pemain kustom!</p>
+          </div>
+
+          <div id="mode-vsbot" class="mode-card vsbot">
+            <div class="mode-icon">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="11" width="18" height="10" rx="2"></rect>
+                <circle cx="12" cy="5" r="2"></circle>
+                <path d="M12 7v4"></path>
+                <line x1="8" y1="16" x2="8.01" y2="16"></line>
+                <line x1="16" y1="16" x2="16.01" y2="16"></line>
+              </svg>
+            </div>
+            <h3>vs Bot AI</h3>
+            <p>Main solo melawan Luna, Reyy, dan Kuro dengan AI cerdas (2, 3, atau 4 pemain)!</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. LOBBY / ROOM SCREEN -->
+    <div id="screen-lobby" class="screen">
+      <div class="mode-container" style="max-width: 920px;">
+        <div class="screen-header">
+          <button id="btn-back-lobby" class="btn-back" title="Kembali">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+          </button>
+          <h2 class="screen-title">Lobby Ruangan</h2>
+          <div class="lobby-header-actions">
+            <button id="btn-open-create-room" class="btn-create-room">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              Buat Room
+            </button>
+            <button id="btn-refresh-rooms" class="btn-back" title="Refresh">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M23 4v6h-6"></path>
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div id="lobby-room-container" class="lobby-room-list">
+          <!-- Dynamically populated room list -->
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. ROOM WAITING / PRE-GAME LOBBY SCREEN -->
+    <div id="screen-room-waiting" class="screen">
+      <div class="waiting-room-container">
+        <div class="screen-header">
+          <button id="btn-leave-room" class="btn-back" title="Keluar Room">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+          </button>
+          <div>
+            <h2 id="waiting-room-title" class="screen-title" style="text-align: center;">Nama Room</h2>
+            <div id="waiting-room-meta" style="font-size: 0.9rem; color: #94a3b8; text-align: center; margin-top: 4px;">
+              Maks 4 Pemain • Publik
+            </div>
+          </div>
+          <div style="width: 44px;"></div>
+        </div>
+
+        <!-- 4 Player Slots Grid -->
+        <div id="waiting-slots-grid" class="room-slots-grid">
+          <!-- Generated slots -->
+        </div>
+
+        <div class="waiting-room-actions">
+          <button id="btn-add-ai-bot" class="btn-menu-secondary" style="font-size: 0.95rem;">
+            🤖 + Tambah Bot AI
+          </button>
+          <div style="display: flex; gap: 14px;">
+            <button id="btn-toggle-ready" class="btn-menu-secondary" style="background: rgba(34, 197, 94, 0.2); border-color: rgba(34, 197, 94, 0.4); color: #4ade80;">
+              ✅ Siap (Ready)
+            </button>
+            <button id="btn-start-room-game" class="btn-menu-primary" style="padding: 14px 28px; font-size: 1.2rem;">
+              🎮 Mulai Permainan
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. IN-GAME / GAMEPLAY SCREEN -->
+    <div id="screen-game" class="screen" style="background-image: url('assets/table_bg.jpg');">
+      <!-- Game Top Bar -->
+      <div class="game-top-bar">
+        <div class="game-info-badge">
+          <div id="active-color-badge" class="active-color-indicator"></div>
+          <div id="active-turn-text" class="active-turn-text">Giliran Kamu!</div>
+        </div>
+
+        <div class="game-top-actions">
+          <button id="btn-game-rules" class="icon-btn" title="Aturan & Panduan Kartu">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+          </button>
+          <button id="btn-game-chat" class="icon-btn" title="Chat & Emote">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+          </button>
+          <button id="btn-game-settings" class="icon-btn" title="Settings">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+          </button>
+          <button id="btn-game-exit" class="icon-btn" title="Keluar Game">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Action Toast Banner -->
+      <div id="action-toast" class="action-toast">Game Dimulai!</div>
+
+      <!-- 1. Player Reyy / Player 2 (Top) -->
+      <div id="station-reyy" class="player-station station-reyy">
+        <div class="avatar-wrap">
+          <img class="avatar-img" src="assets/avatars/reyy.png" alt="Reyy">
+          <div id="bubble-reyy" class="speech-bubble">Kura! 🐢</div>
+        </div>
+        <div class="player-info">
+          <span class="player-name">Reyy 👑</span>
+          <span class="card-count-badge">🃏 7</span>
+        </div>
+        <div class="cards-opponent-fan"></div>
+      </div>
+
+      <!-- 2. Player Luna / Player 1 (Left) -->
+      <div id="station-luna" class="player-station station-luna">
+        <div class="avatar-wrap">
+          <img class="avatar-img" src="assets/avatars/luna.png" alt="Luna">
+          <div id="bubble-luna" class="speech-bubble">Good luck! ✨</div>
+        </div>
+        <div class="player-info">
+          <span class="player-name">Luna</span>
+          <span class="card-count-badge">🃏 7</span>
+        </div>
+        <div class="cards-opponent-fan"></div>
+      </div>
+
+      <!-- 3. Player Kuro / Player 3 (Right) -->
+      <div id="station-kuro" class="player-station station-kuro">
+        <div class="avatar-wrap">
+          <img class="avatar-img" src="assets/avatars/kuro.png" alt="Kuro">
+          <div id="bubble-kuro" class="speech-bubble">Awas ya! 💥</div>
+        </div>
+        <div class="player-info">
+          <span class="player-name">Kuro</span>
+          <span class="card-count-badge">🃏 7</span>
+        </div>
+        <div class="cards-opponent-fan"></div>
+      </div>
+
+      <!-- Center Table Hub (800x1000 Ratio Cards) -->
+      <div class="table-arena">
+        <div class="table-center-hub">
+          <div class="turn-ring">
+            <svg class="turn-arrow-svg" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255, 170, 0, 0.45)" stroke-width="2.5" stroke-dasharray="14 10" />
+              <polygon points="50,2 56,10 44,10" fill="#ffa726" />
+              <polygon points="50,98 44,90 56,90" fill="#ffa726" />
+            </svg>
+          </div>
+
+          <div class="piles-container">
+            <!-- Draw Pile -->
+            <div id="draw-pile" class="pile draw-pile" title="Klik untuk ambil kartu">
+              <div class="card-deck-stack">
+                <img class="card-deck-img" src="assets/cards/wild/back.png" alt="Draw Pile">
+                <div id="deck-count" class="deck-count-badge">50</div>
+              </div>
+            </div>
+
+            <!-- Discard Pile -->
+            <div id="discard-pile" class="pile discard-pile green">
+              <img src="assets/cards/green/0.png" alt="Top Discard Card">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Player You (Bottom Left Station) -->
+      <div id="station-you" class="player-station station-you">
+        <div class="avatar-wrap">
+          <img class="avatar-img" src="assets/avatars/you.png" alt="You">
+          <div id="bubble-you" class="speech-bubble">KURA! 🔥</div>
+        </div>
+        <div class="player-info">
+          <span class="player-name">You</span>
+          <span class="card-count-badge">🃏 7</span>
+        </div>
+      </div>
+
+      <!-- Human Player Hand Cards (Exact 800x1000 Aspect Ratio) -->
+      <div id="player-hand" class="player-hand-container">
+        <div class="player-cards-fan"></div>
+      </div>
+
+      <!-- KURA Action Button -->
+      <button id="btn-kura" class="btn-kura-shout" title="Teriak Kura!">
+        KURA!
+      </button>
+    </div>
+
+    <!-- =========================================
+         MODALS & OVERLAYS
+    ========================================= -->
+
+    <!-- CREATE ROOM MODAL -->
+    <div id="modal-create-room" class="modal-overlay">
+      <div class="modal-card">
+        <h3 class="modal-title">➕ Buat Room Baru</h3>
+        <p class="modal-desc">Atur nama room, sandi rahasia, dan jumlah pemain</p>
+
+        <div class="form-group">
+          <label class="form-label">Nama Ruangan</label>
+          <input type="text" id="input-room-name" class="form-input" placeholder="Contoh: Mabar Kura Seru" maxlength="24">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Kata Sandi (Opsional)</label>
+          <input type="password" id="input-room-password" class="form-input" placeholder="Kosongkan jika ingin publik" maxlength="16">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Jumlah Pemain</label>
+          <div class="player-count-selector">
+            <button class="player-count-btn" data-count="2">2 Pemain</button>
+            <button class="player-count-btn" data-count="3">3 Pemain</button>
+            <button class="player-count-btn active" data-count="4">4 Pemain</button>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 25px;">
+          <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 0.95rem;">
+            <input type="checkbox" id="check-fill-ai" checked style="width: 18px; height: 18px; accent-color: #ff9800;">
+            <span>Isi otomatis slot kosong dengan Bot AI</span>
+          </label>
+        </div>
+
+        <div style="display: flex; gap: 12px; width: 100%;">
+          <button id="btn-submit-create-room" class="btn-menu-primary" style="flex: 1.5; font-size: 1.15rem; padding: 14px;">
+            🚀 Buat Room
+          </button>
+          <button class="btn-menu-secondary btn-close-modal" style="flex: 1; justify-content: center;">
+            Batal
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ENTER ROOM PASSWORD MODAL -->
+    <div id="modal-room-password" class="modal-overlay">
+      <div class="modal-card" style="max-width: 420px;">
+        <h3 class="modal-title">🔒 Masukkan Kata Sandi</h3>
+        <p id="password-room-desc" class="modal-desc">Ruangan ini dilindungi kata sandi.</p>
+        <div class="form-group">
+          <input type="password" id="input-join-password" class="form-input" placeholder="Masukkan kata sandi room" maxlength="16">
+        </div>
+        <div style="display: flex; gap: 12px; width: 100%;">
+          <button id="btn-submit-password-join" class="btn-menu-primary" style="flex: 1.3; font-size: 1.1rem; padding: 12px;">
+            Masuk
+          </button>
+          <button class="btn-menu-secondary btn-close-modal" style="flex: 1; justify-content: center;">
+            Batal
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- VS BOT PLAYER COUNT SELECTOR MODAL -->
+    <div id="modal-bot-options" class="modal-overlay">
+      <div class="modal-card" style="max-width: 440px;">
+        <h3 class="modal-title">🤖 Latihan vs Bot AI</h3>
+        <p class="modal-desc">Pilih jumlah pemain yang diinginkan di atas meja</p>
+        <div class="player-count-selector" style="margin-bottom: 24px;">
+          <button class="player-count-btn bot-opt-btn" data-count="2">2 Pemain<br><small style="font-size:0.75rem;">(1 vs 1)</small></button>
+          <button class="player-count-btn bot-opt-btn" data-count="3">3 Pemain<br><small style="font-size:0.75rem;">(1 vs 2 Bot)</small></button>
+          <button class="player-count-btn bot-opt-btn active" data-count="4">4 Pemain<br><small style="font-size:0.75rem;">(Full Table)</small></button>
+        </div>
+        <button id="btn-start-bot-match" class="btn-menu-primary" style="width: 100%; font-size: 1.2rem; padding: 14px;">
+          Mulai Bermain!
+        </button>
+      </div>
+    </div>
+
+    <!-- Wild Color Picker Modal -->
+    <div id="modal-color" class="modal-overlay">
+      <div class="modal-card">
+        <h3 class="modal-title">Pilih Warna Kartu</h3>
+        <p class="modal-desc">Pilih warna untuk melanjutkan permainan</p>
+        <div class="color-picker-grid">
+          <button class="color-choice-btn btn-color-green" data-color="green">
+            🌿 Hijau
+          </button>
+          <button class="color-choice-btn btn-color-brown" data-color="brown">
+            🪵 Cokelat
+          </button>
+          <button class="color-choice-btn btn-color-purple" data-color="purple">
+            🔮 Ungu
+          </button>
+          <button class="color-choice-btn btn-color-magenta" data-color="magenta">
+            🌸 Magenta
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Swap Opponent Picker Modal -->
+    <div id="modal-swap" class="modal-overlay">
+      <div class="modal-card">
+        <h3 class="modal-title">🔄 Tukar Kartu (Swap)</h3>
+        <p class="modal-desc">Pilih 1 lawan untuk bertukar 1 kartu acak</p>
+        <div id="swap-opponent-grid" class="opponent-target-grid"></div>
+      </div>
+    </div>
+
+    <!-- Shell Card & Opponent Picker Modal -->
+    <div id="modal-shell" class="modal-overlay">
+      <div class="modal-card" style="max-width: 550px;">
+        <h3 class="modal-title">🐚 Kartu Shell (Cangkang)</h3>
+        <p class="modal-desc">1. Pilih 1 kartu dari tanganmu untuk diberikan.<br>2. Pilih lawan yang akan menerimanya secara permanen.</p>
+        <h4 style="margin-bottom: 10px; color: #ffb74d;">Pilih Kartu Tangan:</h4>
+        <div id="shell-give-card-grid" style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 20px;"></div>
+        <h4 style="margin-bottom: 10px; color: #ffb74d;">Pilih Lawan:</h4>
+        <div id="shell-opponent-grid" class="opponent-target-grid"></div>
+      </div>
+    </div>
+
+    <!-- Shield Counter Alert Modal -->
+    <div id="modal-shield" class="modal-overlay">
+      <div class="modal-card shield-alert-box">
+        <div class="shield-icon-anim">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#7c4dff" stroke-width="2.5" style="filter: drop-shadow(0 0 10px #7c4dff);">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+        </div>
+        <h3 class="modal-title" style="color: #b388ff;">🛡️ SERANGAN WILD +4!</h3>
+        <p id="shield-alert-text" class="modal-desc" style="color: #e0e7ff;">
+          Kamu diserang Wild +4! Kamu punya kartu Shield. Gunakan Shield untuk memantulkan efek +4 kembali ke penyerang?
+        </p>
+        <div class="shield-actions">
+          <button id="btn-shield-deflect" class="btn-shield-deflect">
+            🛡️ Pantulkan +4!
+          </button>
+          <button id="btn-shield-accept" class="btn-shield-accept">
+            Terima +4
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Win / Lose Result Modal -->
+    <div id="modal-result" class="modal-overlay">
+      <div id="result-content" class="result-modal-box"></div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="modal-settings" class="modal-overlay">
+      <div class="modal-card">
+        <h3 class="modal-title">Pengaturan</h3>
+        <p class="modal-desc">Sesuaikan audio dan preferensi bermain</p>
+        <div class="settings-list">
+          <div class="setting-item">
+            <div class="setting-label">
+              <span>🔊 Efek Suara</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="switch-sound" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="setting-item">
+            <div class="setting-label">
+              <span>🎵 Musik Lofi</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="switch-music" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="setting-item">
+            <div class="setting-label">
+              <span>🌐 Bahasa</span>
+            </div>
+            <span style="color: #ffb74d; font-weight: 700;">Indonesia</span>
+          </div>
+        </div>
+        <button class="btn-menu-primary btn-close-modal" style="width: 100%; font-size: 1.1rem; padding: 12px;">Tutup</button>
+      </div>
+    </div>
+
+    <!-- Rules / Card Guide Modal -->
+    <div id="modal-rules" class="modal-overlay">
+      <div class="modal-card" style="max-width: 680px;">
+        <h3 class="modal-title">Aturan & Kartu Spesial</h3>
+        <p class="modal-desc">Kura Cards memiliki mekanisme unik yang membuat permainan semakin seru!</p>
+        <div class="rules-grid">
+          <!-- Shield -->
+          <div class="rule-card-item">
+            <img class="rule-card-thumb" src="assets/cards/green/shield.png" alt="Shield">
+            <div class="rule-card-content">
+              <h4>Shield (Perisai)</h4>
+              <p>Dapat dimainkan biasa atau sebagai <strong>COUNTER</strong> saat kena +4! Memantulkan +4 kembali ke penyerang, dan giliranmu tidak dilewati!</p>
+            </div>
+          </div>
+          <!-- Swap -->
+          <div class="rule-card-item">
+            <img class="rule-card-thumb" src="assets/cards/brown/swap.png" alt="Swap">
+            <div class="rule-card-content">
+              <h4>Swap (Tukar)</h4>
+              <p>Tukar 1 kartu acak dari tanganmu dengan 1 kartu acak lawan pilihanmu secara instan!</p>
+            </div>
+          </div>
+          <!-- Shell -->
+          <div class="rule-card-item">
+            <img class="rule-card-thumb" src="assets/cards/magenta/shell.png" alt="Shell">
+            <div class="rule-card-content">
+              <h4>Shell (Cangkang)</h4>
+              <p>Butuh minimal 3 kartu di tangan. Berikan 1 kartu pilihanmu ke lawan secara permanen untuk membebani tangan lawan!</p>
+            </div>
+          </div>
+          <!-- Wild -->
+          <div class="rule-card-item">
+            <img class="rule-card-thumb" src="assets/cards/wild/wild.png" alt="Wild">
+            <div class="rule-card-content">
+              <h4>Wild</h4>
+              <p>Bisa dimainkan kapan saja. Ubah warna kartu aktif ke Hijau, Cokelat, Ungu, atau Magenta.</p>
+            </div>
+          </div>
+          <!-- Wild +4 -->
+          <div class="rule-card-item">
+            <img class="rule-card-thumb" src="assets/cards/wild/wild-draw4.png" alt="Wild +4">
+            <div class="rule-card-content">
+              <h4>Wild +4</h4>
+              <p>Pilih warna aktif. Pemain berikutnya ambil 4 kartu dan dilewati, kecuali ia punya Shield untuk memantulkannya!</p>
+            </div>
+          </div>
+          <!-- KURA Callout -->
+          <div class="rule-card-item">
+            <div class="rule-card-thumb" style="display: flex; align-items: center; justify-content: center; background: #e65100; color: #fff; font-weight: 800; font-size: 0.8rem; border-radius: 6px;">KURA!</div>
+            <div class="rule-card-content">
+              <h4>Teriak KURA!</h4>
+              <p>Saat menyisakan 1 kartu, tekan tombol KURA! Jangan sampai lupa atau lawan akan memberimu penalti +2 kartu!</p>
+            </div>
+          </div>
+        </div>
+        <button class="btn-menu-primary btn-close-modal" style="width: 100%; margin-top: 18px; font-size: 1.1rem; padding: 12px;">Paham!</button>
+      </div>
+    </div>
+
+    <!-- Quick Emotes / Chat Modal -->
+    <div id="modal-chat" class="modal-overlay">
+      <div class="modal-card" style="max-width: 420px;">
+        <h3 class="modal-title">Kirim Emote</h3>
+        <p class="modal-desc">Pilih reaksi cepat untuk pemain lain</p>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 100%; margin-bottom: 20px;">
+          <button class="chat-emote-item btn-menu-secondary" style="justify-content: center; font-size: 1.3rem;">😊 Senyum</button>
+          <button class="chat-emote-item btn-menu-secondary" style="justify-content: center; font-size: 1.3rem;">😎 Santai</button>
+          <button class="chat-emote-item btn-menu-secondary" style="justify-content: center; font-size: 1.3rem;">🐢 Kura!</button>
+          <button class="chat-emote-item btn-menu-secondary" style="justify-content: center; font-size: 1.3rem;">🛡️ Block!</button>
+          <button class="chat-emote-item btn-menu-secondary" style="justify-content: center; font-size: 1.3rem;">💥 Rasakan!</button>
+          <button class="chat-emote-item btn-menu-secondary" style="justify-content: center; font-size: 1.3rem;">😭 Ampun!</button>
+          <button class="chat-emote-item btn-menu-secondary" style="justify-content: center; font-size: 1.1rem;">Good luck!</button>
+          <button class="chat-emote-item btn-menu-secondary" style="justify-content: center; font-size: 1.1rem;">Awas ya!</button>
+          <button class="chat-emote-item btn-menu-secondary" style="justify-content: center; font-size: 1.1rem;">GG!</button>
+        </div>
+        <button class="btn-menu-secondary btn-close-modal" style="width: 100%; justify-content: center;">Batal</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
