@@ -15,6 +15,7 @@ export class UIController {
     this.pendingJoinRoomId = null;
     this.selectedCreateMaxPlayers = 4;
     this.selectedBotCount = 4;
+    this.isMultiplayerMatch = false;
 
     this.initDOMElements();
     this.bindEvents();
@@ -40,6 +41,7 @@ export class UIController {
     this.activeColorIndicator = document.getElementById('active-color-badge');
     this.activeTurnText = document.getElementById('active-turn-text');
     this.btnKura = document.getElementById('btn-kura');
+    this.btnSkipTurn = document.getElementById('btn-skip-turn');
     this.actionToast = document.getElementById('action-toast');
 
     // Modals
@@ -54,6 +56,13 @@ export class UIController {
     this.modalCreateRoom = document.getElementById('modal-create-room');
     this.modalRoomPassword = document.getElementById('modal-room-password');
     this.modalBotOptions = document.getElementById('modal-bot-options');
+
+    // Turn Countdown Timer Elements & State (Standard 15s UNO turn timer)
+    this.turnTimerBadge = document.getElementById('turn-timer-badge');
+    this.turnTimerSec = document.getElementById('turn-timer-sec');
+    this.turnTimeLimit = 15;
+    this.turnTimeRemaining = 15;
+    this.turnTimerInterval = null;
   }
 
   bindEvents() {
@@ -124,6 +133,42 @@ export class UIController {
       this.showToast('Daftar ruangan diperbarui!');
     });
 
+    // Search room input
+    document.getElementById('input-search-room')?.addEventListener('input', () => {
+      this.renderLobbyRooms();
+    });
+
+    // Join by ID button
+    document.getElementById('btn-join-by-id')?.addEventListener('click', () => {
+      sounds.playClick();
+      const query = document.getElementById('input-search-room')?.value;
+      if (!query || !query.trim()) {
+        this.showToast('Ketik ID Room atau nama ruangan terlebih dahulu!');
+        return;
+      }
+      this.handleJoinRoomByQuery(query.trim());
+    });
+
+    // Copy Room ID in waiting room
+    const copyIdHandler = () => {
+      sounds.playClick();
+      const room = this.roomManager.currentRoom;
+      if (room) {
+        const idToCopy = room.code || room.id;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(idToCopy).then(() => {
+            this.showToast(`ID Room (${idToCopy}) disalin! Bagikan ke temanmu.`);
+          }).catch(() => {
+            this.showToast(`ID Room: ${idToCopy}`);
+          });
+        } else {
+          this.showToast(`ID Room: ${idToCopy}`);
+        }
+      }
+    };
+    document.getElementById('btn-copy-room-id')?.addEventListener('click', copyIdHandler);
+    document.getElementById('waiting-room-id-badge')?.addEventListener('click', copyIdHandler);
+
     // Create Room Modal open
     document.getElementById('btn-open-create-room')?.addEventListener('click', () => {
       sounds.playClick();
@@ -147,15 +192,20 @@ export class UIController {
       const passInput = document.getElementById('input-room-password')?.value;
       const fillAI = document.getElementById('check-fill-ai')?.checked;
 
-      const newRoom = this.roomManager.createRoom({
+      this.roomManager.createRoom({
         name: nameInput,
         password: passInput,
         maxPlayers: this.selectedCreateMaxPlayers,
         fillWithAI: fillAI
+      }, (res) => {
+        if (res && res.success) {
+          this.closeModal('create-room');
+          this.enterWaitingRoom(res.room);
+          this.showToast(`Room dibuat! ID: ${res.room.code || res.room.id}`);
+        } else {
+          alert(res?.reason || 'Gagal membuat ruangan!');
+        }
       });
-
-      this.closeModal('create-room');
-      this.enterWaitingRoom(newRoom);
     });
 
     // Password Submit Join
@@ -163,14 +213,15 @@ export class UIController {
       sounds.playClick();
       const passInput = document.getElementById('input-join-password')?.value;
       if (this.pendingJoinRoomId) {
-        const res = this.roomManager.joinRoom(this.pendingJoinRoomId, passInput);
-        if (res.success) {
-          this.closeModal('room-password');
-          this.enterWaitingRoom(res.room);
-          this.pendingJoinRoomId = null;
-        } else {
-          alert(res.reason);
-        }
+        this.roomManager.joinRoom(this.pendingJoinRoomId, passInput, (res) => {
+          if (res && res.success) {
+            this.closeModal('room-password');
+            this.enterWaitingRoom(res.room);
+            this.pendingJoinRoomId = null;
+          } else {
+            alert(res?.reason || 'Kata sandi salah!');
+          }
+        });
       }
     });
 
@@ -224,6 +275,7 @@ export class UIController {
     document.getElementById('btn-game-exit')?.addEventListener('click', () => {
       sounds.playClick();
       if (confirm('Keluar ke menu utama?')) {
+        this.stopTurnTimer();
         this.showScreen('menu');
       }
     });
@@ -232,12 +284,14 @@ export class UIController {
     this.drawPileElem?.addEventListener('click', () => {
       if (this.engine.gameOver || this.isBotThinking) return;
       if (this.engine.currentPlayer.isHuman && !this.engine.hasDrawnThisTurn) {
+        this.stopTurnTimer();
         sounds.playDrawSound();
         const drawn = this.engine.drawForCurrentPlayer();
         this.render();
 
         if (drawn && this.engine.canPlayCard(drawn, this.engine.currentPlayer.hand)) {
           this.showToast(`Kamu menarik ${this.engine.cardName(drawn)}. Bisa langsung dimainkan!`);
+          this.startTurnTimer(8); // 8s to play the drawn card or pass
         } else {
           this.showToast(`Kamu menarik 1 kartu. Giliran selesai.`);
           setTimeout(() => {
@@ -258,7 +312,7 @@ export class UIController {
       if (p) {
         this.engine.callKura(p);
         this.btnKura.classList.remove('alert-pulse');
-        this.showSpeechBubble('you', 'KURA! 🐢💨');
+        this.showSpeechBubble('you', 'KURA!');
         this.showToast('Kamu meneriakkan KURA!');
         if (this.kuraTimeout) {
           clearTimeout(this.kuraTimeout);
@@ -278,6 +332,38 @@ export class UIController {
           this.pendingWildCardId = null;
         }
       });
+    });
+
+    // Cancel and Skip buttons in Wild Color modal (+4 or color change)
+    document.getElementById('btn-cancel-color')?.addEventListener('click', () => {
+      sounds.playClick();
+      this.pendingWildCardId = null;
+      this.closeModal('color');
+      this.showToast('Batal memasang kartu.');
+    });
+
+    document.getElementById('btn-skip-from-color')?.addEventListener('click', () => {
+      sounds.playClick();
+      this.handlePlayerSkipTurn();
+    });
+
+    // Cancel in Swap and Shell modals
+    document.getElementById('btn-cancel-swap')?.addEventListener('click', () => {
+      sounds.playClick();
+      this.closeModal('swap');
+      this.showToast('Batal memasang kartu Swap.');
+    });
+
+    document.getElementById('btn-cancel-shell')?.addEventListener('click', () => {
+      sounds.playClick();
+      this.closeModal('shell');
+      this.showToast('Batal memasang kartu Shell.');
+    });
+
+    // In-game Skip Turn button
+    this.btnSkipTurn?.addEventListener('click', () => {
+      sounds.playClick();
+      this.handlePlayerSkipTurn();
     });
 
     // Settings switches
@@ -305,13 +391,28 @@ export class UIController {
       });
     });
 
+    // Custom chat submit
+    const formChat = document.getElementById('form-custom-chat');
+    formChat?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const input = document.getElementById('input-custom-chat');
+      const text = input?.value.trim();
+      if (!text) return;
+      sounds.playClick();
+      input.value = '';
+      this.closeModal('chat');
+      this.showCenterChatBanner('You', text, 'you');
+      this.triggerBotChatReply(text);
+    });
+
     // Chat emote clicks
     document.querySelectorAll('.chat-emote-item').forEach(item => {
       item.addEventListener('click', (e) => {
-        const emote = e.currentTarget.innerText;
+        const emote = e.currentTarget.innerText.trim();
         sounds.playClick();
         this.closeModal('chat');
-        this.showSpeechBubble('you', emote);
+        this.showCenterChatBanner('You', emote, 'you');
+        this.triggerBotChatReply(emote);
       });
     });
   }
@@ -331,16 +432,69 @@ export class UIController {
     if (modal) modal.classList.remove('active');
   }
 
+  handleJoinRoomByQuery(query) {
+    if (!query) return;
+    const cleanQuery = query.trim();
+    const rooms = this.roomManager.getRooms();
+    const found = rooms.find(r => 
+      (r.code && r.code.toLowerCase() === cleanQuery.toLowerCase()) ||
+      (r.id && r.id.toLowerCase() === cleanQuery.toLowerCase()) ||
+      (r.name && r.name.toLowerCase().includes(cleanQuery.toLowerCase()))
+    );
+
+    if (found && found.hasPassword) {
+      this.pendingJoinRoomId = found.id;
+      const desc = document.getElementById('password-room-desc');
+      if (desc) desc.innerText = `Ruangan "${found.name}" (#${found.code || found.id}) dilindungi kata sandi.`;
+      const passInput = document.getElementById('input-join-password');
+      if (passInput) passInput.value = '';
+      this.openModal('room-password');
+      return;
+    }
+
+    this.roomManager.joinRoom(cleanQuery, '', (res) => {
+      if (res && res.success) {
+        this.enterWaitingRoom(res.room);
+        this.showToast(`Berhasil masuk ke room #${res.room.code || res.room.id}!`);
+      } else {
+        if (res && res.reason && res.reason.toLowerCase().includes('sandi')) {
+          this.pendingJoinRoomId = cleanQuery;
+          const desc = document.getElementById('password-room-desc');
+          if (desc) desc.innerText = `Ruangan ini dilindungi kata sandi.`;
+          const passInput = document.getElementById('input-join-password');
+          if (passInput) passInput.value = '';
+          this.openModal('room-password');
+        } else {
+          this.showToast(res?.reason || 'Room tidak ditemukan atau sudah penuh!');
+        }
+      }
+    });
+  }
+
   // Lobby & Room Rendering
   renderLobbyRooms() {
     const container = document.getElementById('lobby-room-container');
     if (!container) return;
 
-    const rooms = this.roomManager.getRooms();
+    const searchInput = document.getElementById('input-search-room');
+    const query = (searchInput?.value || '').trim().toLowerCase();
+
+    let rooms = this.roomManager.getRooms();
+    if (query) {
+      rooms = rooms.filter(r => 
+        (r.name && r.name.toLowerCase().includes(query)) ||
+        (r.code && r.code.toLowerCase().includes(query)) ||
+        (r.id && r.id.toLowerCase().includes(query)) ||
+        (r.hostName && r.hostName.toLowerCase().includes(query))
+      );
+    }
+
     container.innerHTML = '';
 
     if (rooms.length === 0) {
-      container.innerHTML = `<div style="text-align: center; color: #94a3b8; padding: 40px;">Belum ada ruangan. Buat ruangan pertamamu!</div>`;
+      container.innerHTML = `<div style="text-align: center; color: #94a3b8; padding: 40px; font-family: var(--font-pixel); font-size: 1.3rem;">
+        ${query ? `Tidak ada ruangan yang cocok dengan "${query}".` : 'Belum ada ruangan. Buat ruangan pertamamu!'}
+      </div>`;
       return;
     }
 
@@ -348,38 +502,70 @@ export class UIController {
       const isFull = room.players.length >= room.maxPlayers;
       const item = document.createElement('div');
       item.className = 'lobby-room-item';
+
+      // Clean display name
+      const displayName = room.name.replace(/^[^\w\s]+\s*/, '');
+
+      // Determine matching title icon
+      let titleIconSvg = '';
+      if (room.hasPassword || displayName.toLowerCase().includes('private') || displayName.toLowerCase().includes('vip')) {
+        titleIconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
+      } else if (displayName.toLowerCase().includes('chill') || displayName.toLowerCase().includes('santai')) {
+        titleIconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#67e8f9" stroke-width="2.4"><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg>`;
+      } else {
+        titleIconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="#ffd54f"><path d="M2 19h20v2H2zM2 5l5 7 5-7 5 7 5-7v12H2z"></path></svg>`;
+      }
+
       item.innerHTML = `
-        <div>
-          <h4 style="font-size: 1.15rem; color: #ffca28; margin-bottom: 2px;">${room.name}</h4>
+        <div class="lobby-room-info">
+          <div class="lobby-room-title-wrap">
+            <span class="lobby-room-title-icon">${titleIconSvg}</span>
+            <h4 class="lobby-room-title">${displayName}</h4>
+            <span class="room-code-chip">#${room.code || room.id}</span>
+          </div>
           <div class="room-meta">
-            <span>Host: <strong>${room.hostName}</strong></span>
-            <span>•</span>
-            <span>🃏 ${room.players.length}/${room.maxPlayers} Pemain</span>
-            <span>•</span>
+            <span class="room-meta-chip">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="#ffd54f"><path d="M2 19h20v2H2zM2 5l5 7 5-7 5 7 5-7v12H2z"></path></svg>
+              <span>Host: <strong>${room.hostName}</strong></span>
+            </span>
+            <span class="room-meta-chip">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+              <span>${room.players.length}/${room.maxPlayers} Pemain</span>
+            </span>
             <span class="badge-tag ${room.hasPassword ? 'locked' : 'public'}">
-              ${room.hasPassword ? '🔒 Terkunci' : '🔓 Publik'}
+              ${room.hasPassword ? 
+                `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg> <span>Terkunci</span>` : 
+                `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg> <span>Publik</span>`
+              }
             </span>
           </div>
         </div>
-        <button class="btn-join-room" ${isFull ? 'disabled style="background: #475569; cursor: not-allowed;"' : ''}>
-          ${isFull ? 'Penuh' : 'Join Room'}
+        <button class="btn-ticket-join ${isFull ? 'disabled' : ''}" ${isFull ? 'disabled' : ''}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M13.8 12H3"/>
+          </svg>
+          <span>${isFull ? 'PENUH' : 'JOIN ROOM'}</span>
         </button>
       `;
 
       if (!isFull) {
-        item.querySelector('.btn-join-room')?.addEventListener('click', () => {
+        item.querySelector('.btn-ticket-join')?.addEventListener('click', () => {
           sounds.playClick();
           if (room.hasPassword) {
             this.pendingJoinRoomId = room.id;
             const desc = document.getElementById('password-room-desc');
-            if (desc) desc.innerText = `Ruangan "${room.name}" dilindungi kata sandi.`;
-            document.getElementById('input-join-password').value = '';
+            if (desc) desc.innerText = `Ruangan "${room.name}" (#${room.code || room.id}) dilindungi kata sandi.`;
+            const passInput = document.getElementById('input-join-password');
+            if (passInput) passInput.value = '';
             this.openModal('room-password');
           } else {
-            const res = this.roomManager.joinRoom(room.id);
-            if (res.success) {
-              this.enterWaitingRoom(res.room);
-            }
+            this.roomManager.joinRoom(room.id, '', (res) => {
+              if (res && res.success) {
+                this.enterWaitingRoom(res.room);
+              } else {
+                this.showToast(res?.reason || 'Gagal bergabung ke ruangan!');
+              }
+            });
           }
         });
       }
@@ -399,8 +585,30 @@ export class UIController {
     if (!room) return;
 
     document.getElementById('waiting-room-title').innerText = room.name;
-    document.getElementById('waiting-room-meta').innerText =
-      `Maks ${room.maxPlayers} Pemain • ${room.hasPassword ? '🔒 Berkata Sandi' : '🔓 Publik'} • Host: ${room.hostName}`;
+    const roomCodeElem = document.getElementById('waiting-room-id-text');
+    if (roomCodeElem) {
+      roomCodeElem.innerText = room.code || room.id;
+    }
+
+    const metaContainer = document.getElementById('waiting-room-meta');
+    if (metaContainer) {
+      metaContainer.innerHTML = `
+        <span class="room-meta-pill">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+          Maks ${room.maxPlayers} Pemain
+        </span>
+        <span class="room-meta-pill">
+          ${room.hasPassword ? 
+            `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg><span style="color:#f59e0b">Berkata Sandi</span>` : 
+            `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg><span style="color:#22c55e">Publik</span>`
+          }
+        </span>
+        <span class="room-meta-pill">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="#ffd54f"><path d="M2 19h20v2H2zM2 5l5 7 5-7 5 7 5-7v12H2z"></path></svg>
+          Host: ${room.hostName}
+        </span>
+      `;
+    }
 
     const slotsGrid = document.getElementById('waiting-slots-grid');
     if (!slotsGrid) return;
@@ -409,9 +617,33 @@ export class UIController {
     const isHost = (room.hostId === this.roomManager.myPlayerId);
     const btnStart = document.getElementById('btn-start-room-game');
     const btnAddBot = document.getElementById('btn-add-ai-bot');
+    const btnToggleReady = document.getElementById('btn-toggle-ready');
 
-    if (btnStart) btnStart.style.display = isHost ? 'block' : 'none';
-    if (btnAddBot) btnAddBot.style.display = isHost ? 'block' : 'none';
+    if (btnStart) btnStart.style.display = isHost ? 'inline-flex' : 'none';
+    if (btnAddBot) btnAddBot.style.display = isHost ? 'inline-flex' : 'none';
+
+    const me = room.players.find(p => p.id === this.roomManager.myPlayerId);
+    if (btnToggleReady && me) {
+      if (me.isReady) {
+        btnToggleReady.className = 'btn-retro-ticket btn-ticket-ready is-ready';
+        btnToggleReady.innerHTML = `
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+          <span>Siap (Ready)</span>
+        `;
+      } else {
+        btnToggleReady.className = 'btn-retro-ticket btn-ticket-ready not-ready';
+        btnToggleReady.innerHTML = `
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          <span>Belum Siap</span>
+        `;
+      }
+    }
 
     for (let i = 0; i < room.maxPlayers; i++) {
       const player = room.players[i];
@@ -419,20 +651,61 @@ export class UIController {
 
       if (player) {
         slotCard.className = 'player-slot-card filled';
+        let statusHtml = '';
+        if (player.isHost) {
+          statusHtml = `
+            <div class="slot-status host">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M2 19h20v2H2zM2 5l5 7 5-7 5 7 5-7v12H2z"></path></svg>
+              <span>Host</span>
+            </div>
+          `;
+        } else if (player.isReady) {
+          statusHtml = `
+            <div class="slot-status ready">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              <span>Siap</span>
+            </div>
+          `;
+        } else {
+          statusHtml = `
+            <div class="slot-status waiting">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              <span>Menunggu</span>
+            </div>
+          `;
+        }
+
+        const botTagHtml = player.isAI ? `
+          <div class="slot-ai-badge">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="3"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8.01" y2="16"></line><line x1="16" y1="16" x2="16.01" y2="16"></line></svg>
+            <span>Bot AI</span>
+          </div>
+        ` : '';
+
         slotCard.innerHTML = `
           <img src="${player.avatar}" alt="${player.name}" class="slot-avatar">
           <div class="slot-name">${player.name}</div>
-          <div class="slot-status ${player.isHost ? 'host' : (player.isReady ? 'ready' : '')}">
-            ${player.isHost ? '👑 Host' : (player.isReady ? '✅ Siap' : '⏳ Menunggu')}
-          </div>
-          ${player.isAI ? '<span style="font-size: 0.75rem; color: #ffb74d; margin-top: 4px;">🤖 Bot AI</span>' : ''}
+          ${statusHtml}
+          ${botTagHtml}
         `;
       } else {
-        slotCard.className = 'player-slot-card';
+        slotCard.className = 'player-slot-card empty';
+        const emptyBtnHtml = isHost ? `
+          <button class="slot-empty-btn" title="Tambah Bot ke Slot">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="3"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path></svg>
+            <span>+ Tambah Bot</span>
+          </button>
+        ` : '';
+
         slotCard.innerHTML = `
-          <div style="font-size: 2.2rem; opacity: 0.35; margin-bottom: 8px;">➕</div>
-          <div class="slot-name" style="opacity: 0.6;">Slot Kosong</div>
-          ${isHost ? '<button class="slot-empty-btn">+ Tambah Bot</button>' : ''}
+          <div class="slot-empty-icon">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </div>
+          <div class="slot-name slot-empty-label">Slot Kosong</div>
+          ${emptyBtnHtml}
         `;
         if (isHost) {
           slotCard.querySelector('.slot-empty-btn')?.addEventListener('click', () => {
@@ -447,15 +720,118 @@ export class UIController {
   }
 
   onMultiplayerNetworkMessage(msg) {
-    if (msg.type === 'ROOM_CREATED' || msg.type === 'ROOM_UPDATED') {
+    if (msg.type === 'ROOMS_LIST') {
+      if (this.screens.lobby?.classList.contains('active')) {
+        this.renderLobbyRooms();
+      }
+    } else if (msg.type === 'ROOM_CREATED' || msg.type === 'ROOM_UPDATED') {
+      if (this.roomManager.currentRoom && msg.room && this.roomManager.currentRoom.id === msg.room.id) {
+        this.roomManager.currentRoom = msg.room;
+      }
       if (this.screens.lobby?.classList.contains('active')) {
         this.renderLobbyRooms();
       }
       if (this.screens.waiting?.classList.contains('active')) {
         this.renderWaitingRoom();
       }
-    } else if (msg.type === 'START_GAME' && this.roomManager.currentRoom?.id === msg.roomId) {
+    } else if (msg.type === 'START_GAME') {
       this.initGameFromRoom(msg.room);
+    } else if (msg.type === 'SYNC_GAME_STATE') {
+      const data = msg.data;
+      if (!data || !this.engine) return;
+
+      this.engine.topDiscard = data.topDiscard;
+      this.engine.activeColor = data.activeColor;
+      this.engine.turnIndex = data.turnIndex;
+      this.engine.direction = data.direction;
+      this.engine.hasDrawnThisTurn = data.hasDrawnThisTurn;
+      if (data.deckCount !== undefined) {
+        this.engine.drawPile = new Array(data.deckCount).fill(null);
+      }
+
+      if (data.players) {
+        data.players.forEach(pInfo => {
+          const existing = this.engine.players.find(p => p.id === pInfo.id);
+          if (existing) {
+            existing.calledKura = pInfo.calledKura;
+            if (pInfo.id !== this.roomManager.myPlayerId) {
+              existing.hand = new Array(pInfo.cardCount).fill(null);
+            }
+          }
+        });
+      }
+
+      const human = this.engine.players.find(p => p.id === this.roomManager.myPlayerId);
+      if (human && data.myHand) {
+        human.hand = data.myHand;
+      }
+
+      if (data.lastAction === 'PLAY_CARD' || data.lastAction === 'BOT_PLAY') {
+        sounds.playCardSound();
+      } else if (data.lastAction === 'DRAW_CARD' || data.lastAction === 'BOT_DRAW') {
+        sounds.playDrawSound();
+      }
+
+      this.render();
+
+      const curr = this.engine.currentPlayer;
+      if (curr && curr.id === this.roomManager.myPlayerId && !data.gameOver) {
+        this.startTurnTimer(15);
+        sounds.playTurnSound();
+      } else {
+        this.stopTurnTimer();
+      }
+
+      if (data.gameOver) {
+        this.engine.gameOver = true;
+        this.engine.winner = data.winner;
+        this.stopTurnTimer();
+        this.renderGameOverModal(data.winner);
+      }
+    } else if (msg.type === 'SHIELD_PROMPT') {
+      const { attacker, targetPlayer } = msg.data;
+      if (targetPlayer && targetPlayer.id === this.roomManager.myPlayerId) {
+        sounds.playTurnSound();
+        const text = document.getElementById('shield-alert-text');
+        if (text) {
+          text.innerText = `Kamu diserang Wild +4 oleh ${attacker.name}! Gunakan kartu Shield untuk memantulkan +4 kembali ke ${attacker.name}?`;
+        }
+
+        const btnDeflect = document.getElementById('btn-shield-deflect');
+        const btnAccept = document.getElementById('btn-shield-accept');
+
+        const onDeflect = () => {
+          sounds.playShieldSound();
+          this.closeModal('shield');
+          this.roomManager.resolveShield(true);
+          cleanup();
+        };
+
+        const onAccept = () => {
+          sounds.playDrawSound();
+          this.closeModal('shield');
+          this.roomManager.resolveShield(false);
+          cleanup();
+        };
+
+        const cleanup = () => {
+          btnDeflect?.removeEventListener('click', onDeflect);
+          btnAccept?.removeEventListener('click', onAccept);
+        };
+
+        btnDeflect?.addEventListener('click', onDeflect, { once: true });
+        btnAccept?.addEventListener('click', onAccept, { once: true });
+
+        this.openModal('shield');
+      }
+    } else if (msg.type === 'KURA_SHOUTED') {
+      const { playerId, playerName } = msg.data;
+      sounds.playKuraSound();
+      this.showSpeechBubble(playerId, 'KURA!');
+      this.showToast(`${playerName} meneriakkan KURA!`);
+    } else if (msg.type === 'NEW_IN_GAME_CHAT') {
+      const { senderName, senderId, text } = msg.data;
+      this.showCenterChatBanner(senderName, text, senderId === this.roomManager.myPlayerId ? 'you' : senderId);
     }
   }
 
@@ -463,23 +839,16 @@ export class UIController {
     const room = this.roomManager.currentRoom;
     if (!room) return;
 
-    // If slots are not full and fillWithAI is true, fill them
-    if (room.fillWithAI) {
-      while (room.players.length < room.maxPlayers) {
-        this.roomManager.addBotToRoom();
-      }
-    }
-
-    if (room.players.length < 2) {
+    if (room.players.length < 2 && !room.fillWithAI) {
       alert('Minimal 2 pemain untuk memulai permainan!');
       return;
     }
 
-    this.roomManager.broadcast({ type: 'START_GAME', roomId: room.id, room });
-    this.initGameFromRoom(room);
+    this.roomManager.startRoomGame();
   }
 
   initGameFromRoom(room) {
+    this.isMultiplayerMatch = true;
     const myId = this.roomManager.myPlayerId;
     const playersConfig = room.players.map(p => ({
       id: p.id,
@@ -494,6 +863,7 @@ export class UIController {
   }
 
   startBotMatch(playerCount = 4) {
+    this.isMultiplayerMatch = false;
     const botPresets = [
       { id: 'kuro', name: 'Kuro', avatar: 'assets/avatars/kuro.png', isHuman: false },
       { id: 'reyy', name: 'Reyy', avatar: 'assets/avatars/reyy.png', isHuman: false },
@@ -526,66 +896,70 @@ export class UIController {
     this.render();
     sounds.playTurnSound();
     sounds.startBGM();
-    this.showToast('Game Dimulai! Giliran Kamu!');
-    this.handleNextTurn();
+
+    if (!this.isMultiplayerMatch) {
+      this.showToast('Game Dimulai! Giliran Kamu!');
+      this.handleNextTurn();
+    } else {
+      this.showToast('Game Dimulai!');
+    }
   }
 
   setupPlayerStationsVisibility() {
-    // Hide or show player stations according to engine.players
-    const allStations = ['station-you', 'station-luna', 'station-reyy', 'station-kuro'];
-    allStations.forEach(id => {
-      const el = document.getElementById(id);
+    const youEl = document.querySelector('.station-you');
+    const leftEl = document.querySelector('.station-luna');
+    const topEl = document.querySelector('.station-reyy');
+    const rightEl = document.querySelector('.station-kuro');
+
+    [youEl, leftEl, topEl, rightEl].forEach(el => {
       if (el) el.style.display = 'none';
     });
 
-    const human = this.engine.players.find(p => p.isHuman) || this.engine.players[0];
-    const opponents = this.engine.players.filter(p => p !== human);
+    const myId = this.isMultiplayerMatch ? this.roomManager.myPlayerId : 'you';
+    const human = this.engine.players.find(p => p.id === myId) || this.engine.players.find(p => p.isHuman) || this.engine.players[0];
+    const opponents = this.engine.players.filter(p => p.id !== human.id);
 
-    // You station is always visible
-    const youStation = document.getElementById('station-you');
-    if (youStation) {
-      youStation.style.display = 'flex';
-      const nameEl = youStation.querySelector('.player-name');
-      const imgEl = youStation.querySelector('.avatar-img');
+    // Bottom station is always the local player
+    if (youEl) {
+      youEl.id = `station-${human.id}`;
+      youEl.style.display = 'flex';
+      const nameEl = youEl.querySelector('.player-name');
+      const imgEl = youEl.querySelector('.avatar-img');
+      const bubbleEl = youEl.querySelector('.speech-bubble');
       if (nameEl) nameEl.innerText = human.name;
       if (imgEl) imgEl.src = human.avatar;
+      if (bubbleEl) bubbleEl.id = `bubble-${human.id}`;
     }
 
     if (opponents.length === 1) {
       // 1v1: Top station only
-      const reyyEl = document.getElementById('station-reyy');
-      if (reyyEl) {
-        reyyEl.style.display = 'flex';
-        this.updateStationInfo(reyyEl, opponents[0]);
+      if (topEl) {
+        topEl.style.display = 'flex';
+        this.updateStationInfo(topEl, opponents[0]);
       }
     } else if (opponents.length === 2) {
       // 3 players: Left and Top
-      const lunaEl = document.getElementById('station-luna');
-      const reyyEl = document.getElementById('station-reyy');
-      if (lunaEl) {
-        lunaEl.style.display = 'flex';
-        this.updateStationInfo(lunaEl, opponents[0]);
+      if (leftEl) {
+        leftEl.style.display = 'flex';
+        this.updateStationInfo(leftEl, opponents[0]);
       }
-      if (reyyEl) {
-        reyyEl.style.display = 'flex';
-        this.updateStationInfo(reyyEl, opponents[1]);
+      if (topEl) {
+        topEl.style.display = 'flex';
+        this.updateStationInfo(topEl, opponents[1]);
       }
     } else if (opponents.length >= 3) {
       // 4 players: Kuro (right), Reyy (top), Luna (left)
-      const kuroEl = document.getElementById('station-kuro');
-      const reyyEl = document.getElementById('station-reyy');
-      const lunaEl = document.getElementById('station-luna');
-      if (lunaEl) {
-        lunaEl.style.display = 'flex';
-        this.updateStationInfo(lunaEl, opponents[2] || opponents[0]);
+      if (leftEl) {
+        leftEl.style.display = 'flex';
+        this.updateStationInfo(leftEl, opponents[0]);
       }
-      if (reyyEl) {
-        reyyEl.style.display = 'flex';
-        this.updateStationInfo(reyyEl, opponents[1]);
+      if (topEl) {
+        topEl.style.display = 'flex';
+        this.updateStationInfo(topEl, opponents[1]);
       }
-      if (kuroEl) {
-        kuroEl.style.display = 'flex';
-        this.updateStationInfo(kuroEl, opponents[0]);
+      if (rightEl) {
+        rightEl.style.display = 'flex';
+        this.updateStationInfo(rightEl, opponents[2]);
       }
     }
   }
@@ -593,9 +967,11 @@ export class UIController {
   updateStationInfo(stationEl, player) {
     const nameEl = stationEl.querySelector('.player-name');
     const imgEl = stationEl.querySelector('.avatar-img');
+    const bubbleEl = stationEl.querySelector('.speech-bubble');
     if (nameEl) nameEl.innerText = player.name;
     if (imgEl) imgEl.src = player.avatar;
     stationEl.id = `station-${player.id}`;
+    if (bubbleEl) bubbleEl.id = `bubble-${player.id}`;
   }
 
   render() {
@@ -603,6 +979,24 @@ export class UIController {
     this.renderCenterTable();
     this.renderPlayerHand();
     this.renderTurnIndicator();
+    this.renderSkipButton();
+  }
+
+  renderSkipButton() {
+    if (!this.btnSkipTurn || !this.engine) return;
+    const myId = this.isMultiplayerMatch ? this.roomManager.myPlayerId : 'you';
+    const isHumanTurn = (this.engine.currentPlayer?.id === myId || (this.engine.currentPlayer?.isHuman && !this.isMultiplayerMatch)) && !this.engine.gameOver && !this.isBotThinking;
+    this.btnSkipTurn.disabled = !isHumanTurn;
+    this.btnSkipTurn.classList.toggle('disabled', !isHumanTurn);
+
+    const span = this.btnSkipTurn.querySelector('span');
+    if (span) {
+      if (this.engine.hasDrawnThisTurn) {
+        span.innerText = 'PASS';
+      } else {
+        span.innerText = 'LEWATI';
+      }
+    }
   }
 
   renderCenterTable() {
@@ -614,7 +1008,7 @@ export class UIController {
     }
 
     if (this.deckCountElem) {
-      this.deckCountElem.innerText = this.engine.drawPile.length;
+      this.deckCountElem.innerText = this.engine.drawPile ? this.engine.drawPile.length : 0;
     }
 
     if (this.activeColorIndicator) {
@@ -630,7 +1024,10 @@ export class UIController {
 
     if (this.activeTurnText) {
       const curr = this.engine.currentPlayer;
-      this.activeTurnText.innerText = curr.isHuman ? 'Giliran Kamu!' : `Giliran ${curr.name}...`;
+      if (curr) {
+        const isMyTurn = this.isMultiplayerMatch ? (curr.id === this.roomManager.myPlayerId) : curr.isHuman;
+        this.activeTurnText.innerText = isMyTurn ? 'Giliran Kamu!' : `Giliran ${curr.name}...`;
+      }
     }
   }
 
@@ -642,6 +1039,7 @@ export class UIController {
   }
 
   renderPlayerStations() {
+    const myId = this.isMultiplayerMatch ? this.roomManager.myPlayerId : 'you';
     this.engine.players.forEach((player, idx) => {
       const station = document.getElementById(`station-${player.id}`);
       if (!station) return;
@@ -651,14 +1049,16 @@ export class UIController {
 
       const countBadge = station.querySelector('.card-count-badge');
       if (countBadge) {
-        countBadge.innerHTML = `🃏 ${player.hand.length}`;
+        const count = player.hand ? player.hand.length : 0;
+        countBadge.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-1px;"><rect x="4" y="2" width="16" height="20" rx="3"></rect></svg> ${count}`;
       }
 
-      if (!player.isHuman) {
+      if (player.id !== myId) {
         const fan = station.querySelector('.cards-opponent-fan');
         if (fan) {
           fan.innerHTML = '';
-          const displayCount = Math.min(player.hand.length, 7);
+          const cardCount = player.hand ? player.hand.length : 0;
+          const displayCount = Math.min(cardCount, 7);
           for (let i = 0; i < displayCount; i++) {
             const cardBack = document.createElement('img');
             cardBack.src = 'assets/cards/wild/back.png';
@@ -671,59 +1071,63 @@ export class UIController {
   }
 
   renderPlayerHand() {
-    const humanPlayer = this.engine.players.find(p => p.isHuman);
+    const myId = this.isMultiplayerMatch ? this.roomManager.myPlayerId : 'you';
+    const humanPlayer = this.engine.players.find(p => p.id === myId) || this.engine.players.find(p => p.isHuman);
     if (!humanPlayer || !this.playerHandContainer) return;
 
     const fanContainer = this.playerHandContainer.querySelector('.player-cards-fan');
     if (!fanContainer) return;
 
     fanContainer.innerHTML = '';
-    const isHumanTurn = this.engine.currentPlayer.isHuman && !this.engine.gameOver && !this.isBotThinking;
+    const isHumanTurn = (this.engine.currentPlayer?.id === humanPlayer.id) && !this.engine.gameOver && !this.isBotThinking;
 
-    if (humanPlayer.hand.length === 2 && isHumanTurn) {
+    if (humanPlayer.hand && humanPlayer.hand.length === 2 && isHumanTurn) {
       this.btnKura.classList.add('alert-pulse');
-    } else if (humanPlayer.hand.length > 2) {
+    } else if (humanPlayer.hand && humanPlayer.hand.length > 2) {
       this.btnKura.classList.remove('alert-pulse');
     }
 
-    const totalCards = humanPlayer.hand.length;
-    humanPlayer.hand.forEach((card, idx) => {
-      const cardEl = document.createElement('div');
-      cardEl.className = 'hand-card';
+    const totalCards = humanPlayer.hand ? humanPlayer.hand.length : 0;
+    if (humanPlayer.hand) {
+      humanPlayer.hand.forEach((card, idx) => {
+        if (!card) return;
+        const cardEl = document.createElement('div');
+        cardEl.className = 'hand-card';
 
-      const isPlayable = isHumanTurn && this.engine.canPlayCard(card, humanPlayer.hand);
-      if (isPlayable) {
-        cardEl.classList.add('playable');
-      } else if (isHumanTurn) {
-        cardEl.classList.add('unplayable');
-      }
-
-      const angle = (idx - (totalCards - 1) / 2) * 4;
-      const yOffset = Math.abs(idx - (totalCards - 1) / 2) * 2.5;
-      cardEl.style.transform = `rotate(${angle}deg) translateY(${yOffset}px)`;
-      cardEl.style.zIndex = idx + 1;
-
-      const img = document.createElement('img');
-      img.src = card.image;
-      img.alt = this.engine.cardName(card);
-      cardEl.appendChild(img);
-
-      cardEl.addEventListener('click', () => {
-        if (!isHumanTurn) return;
-        if (!isPlayable) {
-          if (card.type === 'shell' && humanPlayer.hand.length < 3) {
-            this.showToast('Kartu Shell butuh minimal 3 kartu di tangan!');
-          } else {
-            this.showToast('Kartu ini tidak cocok dengan kartu di meja!');
-          }
-          return;
+        const isPlayable = isHumanTurn && this.engine.canPlayCard(card, humanPlayer.hand);
+        if (isPlayable) {
+          cardEl.classList.add('playable');
+        } else if (isHumanTurn) {
+          cardEl.classList.add('unplayable');
         }
 
-        this.onHumanCardClicked(card);
-      });
+        const angle = (idx - (totalCards - 1) / 2) * 4;
+        const yOffset = Math.abs(idx - (totalCards - 1) / 2) * 2.5;
+        cardEl.style.transform = `rotate(${angle}deg) translateY(${yOffset}px)`;
+        cardEl.style.zIndex = idx + 1;
 
-      fanContainer.appendChild(cardEl);
-    });
+        const img = document.createElement('img');
+        img.src = card.image;
+        img.alt = this.engine.cardName(card);
+        cardEl.appendChild(img);
+
+        cardEl.addEventListener('click', () => {
+          if (!isHumanTurn) return;
+          if (!isPlayable) {
+            if (card.type === 'shell' && humanPlayer.hand.length < 3) {
+              this.showToast('Kartu Shell butuh minimal 3 kartu di tangan!');
+            } else {
+              this.showToast('Kartu ini tidak cocok dengan kartu di meja!');
+            }
+            return;
+          }
+
+          this.onHumanCardClicked(card);
+        });
+
+        fanContainer.appendChild(cardEl);
+      });
+    }
   }
 
   onHumanCardClicked(card) {
@@ -751,14 +1155,17 @@ export class UIController {
     if (!grid) return;
     grid.innerHTML = '';
 
+    const myId = this.isMultiplayerMatch ? this.roomManager.myPlayerId : 'you';
     this.engine.players.forEach((p, idx) => {
-      if (!p.isHuman && p.hand.length > 0) {
+      const isOpponent = this.isMultiplayerMatch ? (p.id !== myId) : !p.isHuman;
+      if (isOpponent && ((p.hand && p.hand.length > 0) || this.isMultiplayerMatch)) {
         const item = document.createElement('div');
         item.className = 'opponent-target-card';
+        const cardCount = p.hand ? p.hand.length : 7;
         item.innerHTML = `
           <img src="${p.avatar}" alt="${p.name}">
           <h4>${p.name}</h4>
-          <span>🃏 ${p.hand.length} Kartu</span>
+          <span><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-1px;"><rect x="4" y="2" width="16" height="20" rx="3"></rect></svg> ${cardCount} Kartu</span>
         `;
         item.addEventListener('click', () => {
           sounds.playSwapSound();
@@ -780,8 +1187,9 @@ export class UIController {
     cardGrid.innerHTML = '';
     opponentGrid.innerHTML = '';
 
-    const humanPlayer = this.engine.players.find(p => p.isHuman);
-    const handOptions = humanPlayer.hand.filter(c => c.id !== shellCardId);
+    const myId = this.isMultiplayerMatch ? this.roomManager.myPlayerId : 'you';
+    const humanPlayer = this.engine.players.find(p => p.id === myId) || this.engine.players.find(p => p.isHuman);
+    const handOptions = humanPlayer ? humanPlayer.hand.filter(c => c && c.id !== shellCardId) : [];
     let chosenCardId = handOptions[0]?.id;
 
     handOptions.forEach(card => {
@@ -806,13 +1214,15 @@ export class UIController {
     });
 
     this.engine.players.forEach((p, idx) => {
-      if (!p.isHuman) {
+      const isOpponent = this.isMultiplayerMatch ? (p.id !== myId) : !p.isHuman;
+      if (isOpponent) {
         const item = document.createElement('div');
         item.className = 'opponent-target-card';
+        const cardCount = p.hand ? p.hand.length : 7;
         item.innerHTML = `
           <img src="${p.avatar}" alt="${p.name}">
           <h4>${p.name}</h4>
-          <span>🃏 ${p.hand.length} Kartu</span>
+          <span><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-1px;"><rect x="4" y="2" width="16" height="20" rx="3"></rect></svg> ${cardCount} Kartu</span>
         `;
         item.addEventListener('click', () => {
           sounds.playShellSound();
@@ -829,9 +1239,62 @@ export class UIController {
     this.openModal('shell');
   }
 
+  handlePlayerSkipTurn() {
+    if (!this.engine || this.engine.gameOver || this.isBotThinking) return;
+
+    this.stopTurnTimer();
+    this.closeModal('color');
+    this.closeModal('swap');
+    this.closeModal('shell');
+    this.closeModal('chat');
+    this.pendingWildCardId = null;
+
+    if (this.isMultiplayerMatch) {
+      const myId = this.roomManager.myPlayerId;
+      if (this.engine.currentPlayer?.id === myId) {
+        sounds.playClick();
+        this.roomManager.skipTurn();
+      }
+      return;
+    }
+
+    const curr = this.engine.currentPlayer;
+    if (!curr || !curr.isHuman) return;
+
+    if (!this.engine.hasDrawnThisTurn) {
+      // UNO rule: if player chooses not to play card, draw 1 card then pass turn
+      sounds.playDrawSound();
+      const drawn = this.engine.drawForCurrentPlayer();
+      this.render();
+      this.showToast('Kamu memilih lewati giliran (menarik 1 kartu).');
+
+      setTimeout(() => {
+        if (this.engine.gameOver) return;
+        this.engine.passTurn();
+        this.render();
+        this.handleNextTurn();
+      }, 700);
+    } else {
+      // Player already drew earlier this turn: pass turn immediately
+      sounds.playClick();
+      this.showToast('Kamu melewati giliran.');
+      this.engine.passTurn();
+      this.render();
+      this.handleNextTurn();
+    }
+  }
+
   executeHumanPlay(cardId, options = {}) {
+    this.stopTurnTimer();
     sounds.playCardSound();
+
+    if (this.isMultiplayerMatch) {
+      this.roomManager.playCard(cardId, options);
+      return;
+    }
+
     const humanPlayer = this.engine.players.find(p => p.isHuman);
+    if (!humanPlayer) return;
 
     if (humanPlayer.hand.length === 2 && !humanPlayer.calledKura) {
       this.kuraTimeout = setTimeout(() => {
@@ -875,7 +1338,7 @@ export class UIController {
         sounds.playShieldSound();
         this.closeModal('shield');
         this.engine.resolveShieldReaction(true);
-        this.showSpeechBubble('you', 'SHIELD REFLECT! 🛡️💥');
+        this.showSpeechBubble('you', 'SHIELD REFLECT!');
         this.showToast(`BOUNCE! +4 dipantulkan kembali ke ${attacker.name}!`);
         this.render();
         cleanup();
@@ -905,8 +1368,8 @@ export class UIController {
       setTimeout(() => {
         sounds.playShieldSound();
         this.engine.resolveShieldReaction(true);
-        this.showSpeechBubble(targetPlayer.id, 'SHIELD COUNTER! 🛡️⚡');
-        this.showToast(`🛡️ ${targetPlayer.name} memantulkan Wild +4 kembali ke ${attacker.name}!`);
+        this.showSpeechBubble(targetPlayer.id, 'SHIELD COUNTER!');
+        this.showToast(`COUNTER! ${targetPlayer.name} memantulkan Wild +4 kembali ke ${attacker.name}!`);
         this.render();
         this.handleNextTurn();
       }, 1000);
@@ -914,14 +1377,19 @@ export class UIController {
   }
 
   handleNextTurn() {
-    if (this.engine.gameOver) return;
+    if (this.engine.gameOver) {
+      this.stopTurnTimer();
+      return;
+    }
 
     const curr = this.engine.currentPlayer;
     if (curr.isHuman) {
       this.isBotThinking = false;
       this.render();
       sounds.playTurnSound();
+      this.startTurnTimer(15);
     } else {
+      this.stopTurnTimer();
       this.isBotThinking = true;
       this.render();
       const thinkTime = 900 + Math.random() * 600;
@@ -960,7 +1428,7 @@ export class UIController {
 
     if (botPlayer.hand.length === 1 && botPlayer.calledKura) {
       sounds.playKuraSound();
-      this.showSpeechBubble(botPlayer.id, 'KURA! 🐢✨');
+      this.showSpeechBubble(botPlayer.id, 'KURA!');
     }
 
     if (result.shieldTriggered) {
@@ -976,6 +1444,7 @@ export class UIController {
 
   checkGameStatus() {
     if (this.engine.gameOver) {
+      this.stopTurnTimer();
       const winner = this.engine.winner;
       if (winner.isHuman) {
         sounds.playWinSound();
@@ -1027,9 +1496,12 @@ export class UIController {
       <p style="font-size: 1.15rem; color: #ffca28; font-weight: 700; margin-bottom: 24px;">
         Selamat! Kamu mengosongkan semua kartumu!
       </p>
-      <button id="btn-result-restart" class="btn-result-action win-btn">Main Lagi</button>
-      <button id="btn-result-continue" style="margin-top: 12px; background: transparent; border: none; color: #94a3b8; cursor: pointer; font-weight: 600;">
-        Kembali ke Menu
+      <button id="btn-result-restart" class="btn-retro-ticket btn-ticket-start" style="width: 100%; font-size: 1.6rem; padding: 14px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"></polygon></svg>
+        <span>Main Lagi</span>
+      </button>
+      <button id="btn-result-continue" class="btn-retro-ticket btn-ticket-secondary" style="width: 100%; margin-top: 12px; font-size: 1.25rem; padding: 10px;">
+        <span>Kembali ke Menu</span>
       </button>
     `;
 
@@ -1054,7 +1526,10 @@ export class UIController {
 
     let rankingHTML = rankings.map((p, rank) => `
       <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 6px 12px; background: rgba(255,255,255,0.06); border-radius: 10px; margin-bottom: 6px;">
-        <span style="font-weight: 700;">#${rank + 1} ${p.name} ${p.id === winner.id ? '👑' : ''}</span>
+        <span style="font-weight: 700; display: flex; align-items: center; gap: 6px;">
+          #${rank + 1} ${p.name}
+          ${p.id === winner.id ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="#ffd54f"><path d="M2 19h20v2H2zM2 5l5 7 5-7 5 7 5-7v12H2z"></path></svg>' : ''}
+        </span>
         <span style="color: #ffb74d;">${p.hand.length} kartu</span>
       </div>
     `).join('');
@@ -1070,9 +1545,12 @@ export class UIController {
       <div style="width: 100%; margin-bottom: 20px;">
         ${rankingHTML}
       </div>
-      <button id="btn-result-restart" class="btn-result-action lose-btn">Coba Lagi</button>
-      <button id="btn-result-continue" style="margin-top: 12px; background: transparent; border: none; color: #94a3b8; cursor: pointer; font-weight: 600;">
-        Kembali ke Lobby
+      <button id="btn-result-restart" class="btn-retro-ticket btn-ticket-start" style="width: 100%; font-size: 1.6rem; padding: 14px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"></polygon></svg>
+        <span>Coba Lagi</span>
+      </button>
+      <button id="btn-result-continue" class="btn-retro-ticket btn-ticket-secondary" style="width: 100%; margin-top: 12px; font-size: 1.25rem; padding: 10px;">
+        <span>Kembali ke Lobby</span>
       </button>
     `;
 
@@ -1106,6 +1584,186 @@ export class UIController {
       setTimeout(() => {
         bubble.classList.remove('show');
       }, 2500);
+    }
+  }
+
+  showCenterChatBanner(senderName, message, playerId = 'you') {
+    const banner = document.getElementById('retro-chat-banner');
+    const senderElem = document.getElementById('chat-banner-sender');
+    const textElem = document.getElementById('chat-banner-text');
+    if (!banner || !senderElem || !textElem) return;
+
+    sounds.playTurnSound();
+
+    senderElem.innerText = senderName;
+    textElem.innerText = message;
+
+    if (playerId) {
+      this.showSpeechBubble(playerId, message);
+    }
+
+    banner.classList.remove('active');
+    void banner.offsetWidth; // force reflow for pop animation
+    banner.classList.add('active');
+
+    clearTimeout(this.chatBannerTimeout);
+    this.chatBannerTimeout = setTimeout(() => {
+      banner.classList.remove('active');
+    }, 3200);
+  }
+
+  triggerBotChatReply(userMsg) {
+    if (!this.engine || this.engine.gameOver) return;
+    const botPlayers = this.engine.players.filter(p => !p.isHuman);
+    if (botPlayers.length === 0) return;
+
+    // 65% chance for a bot to banter back after 1.6 - 2.8s
+    if (Math.random() < 0.65) {
+      setTimeout(() => {
+        if (this.engine.gameOver) return;
+        const randomBot = botPlayers[Math.floor(Math.random() * botPlayers.length)];
+        const botResponses = [
+          'Awas ya!',
+          'Kura!',
+          'Good luck!',
+          'Gaspol!',
+          'Hehe siap!',
+          'Santai dulu!',
+          'GG!',
+          'Rasakan!'
+        ];
+        const reply = botResponses[Math.floor(Math.random() * botResponses.length)];
+        this.showCenterChatBanner(randomBot.name, reply, randomBot.id);
+      }, 1600 + Math.random() * 1200);
+    }
+  }
+
+  startTurnTimer(seconds = 15) {
+    this.stopTurnTimer();
+    this.turnTimeLimit = seconds;
+    this.turnTimeRemaining = seconds;
+
+    if (this.turnTimerBadge) {
+      this.turnTimerBadge.style.display = 'inline-flex';
+      this.turnTimerBadge.classList.remove('warning');
+    }
+    if (this.turnTimerSec) {
+      this.turnTimerSec.innerText = `${this.turnTimeRemaining}s`;
+    }
+
+    this.turnTimerInterval = setInterval(() => {
+      this.turnTimeRemaining--;
+
+      if (this.turnTimerSec) {
+        this.turnTimerSec.innerText = `${this.turnTimeRemaining}s`;
+      }
+
+      if (this.turnTimeRemaining <= 5 && this.turnTimerBadge) {
+        this.turnTimerBadge.classList.add('warning');
+      }
+
+      if (this.turnTimeRemaining <= 0) {
+        this.stopTurnTimer();
+        this.autoPlayForHuman();
+      }
+    }, 1000);
+  }
+
+  stopTurnTimer() {
+    if (this.turnTimerInterval) {
+      clearInterval(this.turnTimerInterval);
+      this.turnTimerInterval = null;
+    }
+    if (this.turnTimerBadge) {
+      this.turnTimerBadge.style.display = 'none';
+      this.turnTimerBadge.classList.remove('warning');
+    }
+  }
+
+  autoPlayForHuman() {
+    if (!this.engine || this.engine.gameOver) return;
+    const curr = this.engine.currentPlayer;
+    if (!curr) return;
+
+    if (this.isMultiplayerMatch) {
+      if (curr.id === this.roomManager.myPlayerId) {
+        this.closeModal('color');
+        this.closeModal('swap');
+        this.closeModal('shell');
+        this.closeModal('chat');
+        this.showToast('Waktu habis! Melewati giliran...');
+        this.roomManager.skipTurn();
+      }
+      return;
+    }
+
+    if (!curr.isHuman) return;
+
+    // Close any selection modals that were currently open
+    this.closeModal('color');
+    this.closeModal('swap');
+    this.closeModal('shell');
+    this.closeModal('chat');
+
+    // Case 1: Player already drew earlier this turn
+    if (this.engine.hasDrawnThisTurn) {
+      const playable = this.engine.getPlayableCards(curr);
+      if (playable.length > 0) {
+        const decision = BotAI.decideTurn(this.engine, curr);
+        if (curr.hand.length === 2) {
+          this.engine.callKura(curr);
+          this.showSpeechBubble('you', 'KURA!');
+          sounds.playKuraSound();
+        }
+        this.showToast('Waktu habis! Kartu dipasang otomatis.');
+        this.executeHumanPlay(decision.cardId || playable[0].id, decision.options || {});
+      } else {
+        this.showToast('Waktu habis! Giliran dilewati.');
+        this.engine.passTurn();
+        this.render();
+        this.handleNextTurn();
+      }
+      return;
+    }
+
+    // Case 2: Player has not drawn yet
+    const decision = BotAI.decideTurn(this.engine, curr);
+
+    if (decision.action === 'play') {
+      if (curr.hand.length === 2) {
+        this.engine.callKura(curr);
+        this.showSpeechBubble('you', 'KURA!');
+        sounds.playKuraSound();
+      }
+      this.showToast('Waktu habis! Kartu dipasang otomatis.');
+      this.executeHumanPlay(decision.cardId, decision.options || {});
+    } else {
+      // Must draw
+      this.showToast('Waktu habis! Menarik kartu otomatis.');
+      sounds.playDrawSound();
+      const drawn = this.engine.drawForCurrentPlayer();
+      this.render();
+
+      if (drawn && this.engine.canPlayCard(drawn, curr.hand)) {
+        setTimeout(() => {
+          if (this.engine.gameOver || !this.engine.currentPlayer.isHuman) return;
+          const secondDecision = BotAI.decideTurn(this.engine, curr);
+          if (curr.hand.length === 2) {
+            this.engine.callKura(curr);
+            this.showSpeechBubble('you', 'KURA!');
+            sounds.playKuraSound();
+          }
+          this.showToast('Memasang kartu yang baru ditarik!');
+          this.executeHumanPlay(drawn.id, secondDecision.options || {});
+        }, 600);
+      } else {
+        setTimeout(() => {
+          if (this.engine.gameOver) return;
+          this.engine.passTurn();
+          this.render();
+          this.handleNextTurn();
+        }, 600);
+      }
     }
   }
 }
