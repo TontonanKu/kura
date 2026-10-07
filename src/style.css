@@ -2738,3 +2738,48 @@ html, body {
   color: #729cb1;
   line-height: 1;
 }
+
+/* COMING SOON BADGES */
+.ticket-badge-soon {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #fff;
+  font-size: 0.65rem;
+  font-family: var(--font-pixel);
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 999px;
+  letter-spacing: 0.5px;
+  border: 1.5px solid #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  pointer-events: none;
+}
+
+.mode-card.coming-soon {
+  opacity: 0.75;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.mode-card.coming-soon:hover {
+  opacity: 0.9;
+}
+
+.coming-soon-ribbon {
+  position: absolute;
+  top: 14px;
+  right: -30px;
+  background: #f59e0b;
+  color: #fff;
+  font-size: 0.72rem;
+  font-family: var(--font-pixel);
+  font-weight: 800;
+  padding: 4px 34px;
+  transform: rotate(45deg);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}

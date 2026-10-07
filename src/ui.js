@@ -74,8 +74,7 @@ export class UIController {
 
     document.getElementById('btn-room-menu')?.addEventListener('click', () => {
       sounds.playClick();
-      this.renderLobbyRooms();
-      this.showScreen('lobby');
+      this.showToast('Mode Multiplayer (Main Bareng Teman) sedang dipersiapkan & segera hadir!');
     });
 
     document.getElementById('btn-settings-menu')?.addEventListener('click', () => {
@@ -101,8 +100,7 @@ export class UIController {
 
     document.getElementById('mode-multiplayer')?.addEventListener('click', () => {
       sounds.playClick();
-      this.renderLobbyRooms();
-      this.showScreen('lobby');
+      this.showToast('Mode Multiplayer (Main Bareng Teman) sedang dipersiapkan & segera hadir!');
     });
 
     // Bot Options Modal buttons

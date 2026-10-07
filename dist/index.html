@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Kura Card - Permainan Kartu Kura</title>
-  <link rel="icon" type="image/png" href="/assets/you-DA-wgUBr.png">
-  <script type="module" crossorigin src="/assets/index-Dto_PK5l.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-D5f8C-8i.css">
+  <link rel="icon" type="image/png" href="./assets/you-DA-wgUBr.png">
+  <script type="module" crossorigin src="./assets/index-j_0NE5_o.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-cORkKWYG.css">
 </head>
 <body>
   <div id="app">
@@ -50,7 +50,7 @@
               <span class="ticket-label">Play</span>
             </button>
 
-            <button id="btn-room-menu" class="btn-custom-ticket btn-sub-ticket" title="Room / Lobby">
+            <button id="btn-room-menu" class="btn-custom-ticket btn-sub-ticket coming-soon" title="Room / Lobby (Segera Hadir)">
               <span class="ticket-stitch-border"></span>
               <span class="ticket-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6">
@@ -61,6 +61,7 @@
                 </svg>
               </span>
               <span class="ticket-label">Room / Lobby</span>
+              <span class="ticket-badge-soon">SOON</span>
             </button>
 
             <button id="btn-rules-menu" class="btn-custom-ticket btn-sub-ticket" title="Aturan &amp; Kartu Spesial">
@@ -112,7 +113,8 @@
           <div style="width: 44px;"></div>
         </div>
         <div class="mode-cards">
-          <div id="mode-multiplayer" class="mode-card multiplayer">
+          <div id="mode-multiplayer" class="mode-card multiplayer coming-soon">
+            <div class="coming-soon-ribbon">Segera Hadir</div>
             <div class="mode-icon">
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -122,7 +124,7 @@
               </svg>
             </div>
             <h3>Multiplayer</h3>
-            <p>Buat atau gabung Room dengan nama, kata sandi, dan jumlah pemain kustom!</p>
+            <p>Fitur bermain bareng teman sedang dipersiapkan dan segera hadir!</p>
           </div>
 
           <div id="mode-vsbot" class="mode-card vsbot">
@@ -257,7 +259,7 @@
     </div>
 
     <!-- 5. IN-GAME / GAMEPLAY SCREEN -->
-    <div id="screen-game" class="screen" style="background-image: url('/assets/table_bg-DED9FGSi.jpg');">
+    <div id="screen-game" class="screen" style="background-image: url('./assets/table_bg-DED9FGSi.jpg');">
       <!-- Game Top Bar -->
       <div class="game-top-bar">
         <div class="game-info-badge">
@@ -307,7 +309,7 @@
       <!-- 1. Player Reyy / Player 2 (Top) -->
       <div id="station-reyy" class="player-station station-reyy">
         <div class="avatar-wrap">
-          <img class="avatar-img" src="/assets/reyy-BNYwAD0k.png" alt="Reyy">
+          <img class="avatar-img" src="./assets/reyy-BNYwAD0k.png" alt="Reyy">
           <div id="bubble-reyy" class="speech-bubble">Kura!</div>
         </div>
         <div class="player-info">
@@ -320,7 +322,7 @@
       <!-- 2. Player Luna / Player 1 (Left) -->
       <div id="station-luna" class="player-station station-luna">
         <div class="avatar-wrap">
-          <img class="avatar-img" src="/assets/luna-BM4hHp_E.png" alt="Luna">
+          <img class="avatar-img" src="./assets/luna-BM4hHp_E.png" alt="Luna">
           <div id="bubble-luna" class="speech-bubble">Good luck!</div>
         </div>
         <div class="player-info">
@@ -333,7 +335,7 @@
       <!-- 3. Player Kuro / Player 3 (Right) -->
       <div id="station-kuro" class="player-station station-kuro">
         <div class="avatar-wrap">
-          <img class="avatar-img" src="/assets/kuro-C7eStHrH.png" alt="Kuro">
+          <img class="avatar-img" src="./assets/kuro-C7eStHrH.png" alt="Kuro">
           <div id="bubble-kuro" class="speech-bubble">Awas ya!</div>
         </div>
         <div class="player-info">
@@ -358,14 +360,14 @@
             <!-- Draw Pile -->
             <div id="draw-pile" class="pile draw-pile" title="Klik untuk ambil kartu">
               <div class="card-deck-stack">
-                <img class="card-deck-img" src="/assets/back-BV-OpYus.png" alt="Draw Pile">
+                <img class="card-deck-img" src="./assets/back-BV-OpYus.png" alt="Draw Pile">
                 <div id="deck-count" class="deck-count-badge">50</div>
               </div>
             </div>
 
             <!-- Discard Pile -->
             <div id="discard-pile" class="pile discard-pile green">
-              <img src="/assets/0-S4pxzknF.png" alt="Top Discard Card">
+              <img src="./assets/0-S4pxzknF.png" alt="Top Discard Card">
             </div>
           </div>
         </div>
@@ -374,7 +376,7 @@
       <!-- 4. Player You (Bottom Left Station) -->
       <div id="station-you" class="player-station station-you">
         <div class="avatar-wrap">
-          <img class="avatar-img" src="/assets/you-DA-wgUBr.png" alt="You">
+          <img class="avatar-img" src="./assets/you-DA-wgUBr.png" alt="You">
           <div id="bubble-you" class="speech-bubble">KURA!</div>
         </div>
         <div class="player-info">
@@ -706,7 +708,7 @@
         <div class="rules-grid">
           <!-- Shield -->
           <div class="rule-card-item">
-            <img class="rule-card-thumb" src="/assets/shield-CgaIJb8B.png" alt="Shield">
+            <img class="rule-card-thumb" src="./assets/shield-CgaIJb8B.png" alt="Shield">
             <div class="rule-card-content">
               <h4>Shield (Perisai)</h4>
               <p>Dapat dimainkan biasa atau sebagai <strong>COUNTER</strong> saat kena +4! Memantulkan +4 kembali ke penyerang, dan giliranmu tidak dilewati!</p>
@@ -714,7 +716,7 @@
           </div>
           <!-- Swap -->
           <div class="rule-card-item">
-            <img class="rule-card-thumb" src="/assets/swap-GEWysaQa.png" alt="Swap">
+            <img class="rule-card-thumb" src="./assets/swap-GEWysaQa.png" alt="Swap">
             <div class="rule-card-content">
               <h4>Swap (Tukar)</h4>
               <p>Tukar 1 kartu acak dari tanganmu dengan 1 kartu acak lawan pilihanmu secara instan!</p>
@@ -722,7 +724,7 @@
           </div>
           <!-- Shell -->
           <div class="rule-card-item">
-            <img class="rule-card-thumb" src="/assets/shell-B5wuH0oK.png" alt="Shell">
+            <img class="rule-card-thumb" src="./assets/shell-B5wuH0oK.png" alt="Shell">
             <div class="rule-card-content">
               <h4>Shell (Cangkang)</h4>
               <p>Butuh minimal 3 kartu di tangan. Berikan 1 kartu pilihanmu ke lawan secara permanen untuk membebani tangan lawan!</p>
@@ -730,7 +732,7 @@
           </div>
           <!-- Wild -->
           <div class="rule-card-item">
-            <img class="rule-card-thumb" src="/assets/wild-BCaum2Ou.png" alt="Wild">
+            <img class="rule-card-thumb" src="./assets/wild-BCaum2Ou.png" alt="Wild">
             <div class="rule-card-content">
               <h4>Wild</h4>
               <p>Bisa dimainkan kapan saja. Ubah warna kartu aktif ke Hijau, Cokelat, Ungu, atau Magenta.</p>
@@ -738,7 +740,7 @@
           </div>
           <!-- Wild +4 -->
           <div class="rule-card-item">
-            <img class="rule-card-thumb" src="/assets/wild-draw4-BsYjAlL5.png" alt="Wild +4">
+            <img class="rule-card-thumb" src="./assets/wild-draw4-BsYjAlL5.png" alt="Wild +4">
             <div class="rule-card-content">
               <h4>Wild +4</h4>
               <p>Pilih warna aktif. Pemain berikutnya ambil 4 kartu dan dilewati, kecuali ia punya Shield untuk memantulkannya!</p>
